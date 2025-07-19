@@ -1,6 +1,6 @@
-# Hetzner DynDNS Script
+# Hetzner DynDNS Script für Fritz!Box
 
-Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-Adresse automatisch an Hetzner DNS weitergibt. Perfekt für Fritz!Box Router und andere Geräte, die DynDNS-Updates unterstützen.
+Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-Adresse automatisch an Hetzner DNS weitergibt. **Speziell optimiert für Fritz!Box Router** mit sicherer Token-Übertragung über das Kennwort-Feld.
 
 ## 🚀 Features
 
@@ -9,7 +9,7 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
 - ✅ **Automatische Record-Erstellung** falls nicht vorhanden
 - ✅ **Intelligente Updates** (nur bei IP-Änderungen)
 - ✅ **Detailliertes Logging** (optional)
-- ✅ **Fritz!Box kompatibel**
+- ✅ **Sicherer Token-Transfer** über Fritz!Box Kennwort-Feld
 - ✅ **Niedrige TTL** (60 Sekunden) für schnelle Updates
 
 ## 📋 Voraussetzungen
@@ -73,20 +73,26 @@ Die Fritz!Box benötigt zwingend einen Benutzernamen, auch wenn das Script diese
 
 ### Beispiele
 
-**Einzelne Domain:**
-```
-https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com&ipv4=1.2.3.4&log=true
-```
+### Beispiele
 
-**Multiple Domains:**
+**Fritz!Box Update-URL (Standard-Konfiguration):**
 ```
-https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com,server.example.com&ipv4=1.2.3.4&ipv6=2001:db8::1&log=true
+https://example.com/hetzner_dyndns.php?pass=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
 ```
+*Die Platzhalter `<pass>`, `<domain>`, `<ipaddr>` etc. werden automatisch von der Fritz!Box ersetzt.*
 
-**Nur IPv6:**
+**Manuelle Test-URLs (nur zum Debuggen):**
 ```
-https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com&ipv6=2001:db8::1
+# Einzelne Domain testen
+https://example.com/hetzner_dyndns.php?pass=YOUR_ACTUAL_TOKEN&domain=home.example.com&ipv4=1.2.3.4&log=true
+
+# Multiple Domains testen  
+https://example.com/hetzner_dyndns.php?pass=YOUR_ACTUAL_TOKEN&domain=home.example.com,server.example.com&ipv4=1.2.3.4&log=true
+
+# Nur IPv6 testen
+https://example.com/hetzner_dyndns.php?pass=YOUR_ACTUAL_TOKEN&domain=home.example.com&ipv6=2001:db8::1&log=true
 ```
+*Diese URLs nur zum manuellen Testen verwenden. In der Fritz!Box immer `<pass>` verwenden!*
 
 ## 📝 Logging
 
@@ -106,6 +112,7 @@ Bei aktiviertem Logging (`log=true`) werden Log-Dateien erstellt:
 - 🛡️ **HTTPS verwenden** für alle API-Aufrufe
 - 🔒 **Zugriff beschränken** - Script nur von vertrauenswürdigen IPs aufrufen lassen
 - 📁 **Log-Dateien schützen** - Webserver-Zugriff auf Log-Dateien verhindern
+- 🔐 **Token im Kennwort-Feld** - Sicherer als direkte URL-Parameter
 
 ### .htaccess Beispiel (Apache)
 ```apache
@@ -120,8 +127,8 @@ Bei aktiviertem Logging (`log=true`) werden Log-Dateien erstellt:
 ### Häufige Probleme
 
 **"Hetzner DNS authentication failed"**
-- ✅ API-Token im Fritz!Box Kennwort-Feld korrekt?
-- ✅ Token hat Schreibrechte?
+- ✅ API-Token im Fritz!Box Kennwort-Feld korrekt eingegeben?
+- ✅ Token hat Lese- und Schreibrechte in Hetzner DNS?
 - ✅ Internet-Verbindung vorhanden?
 - ✅ Update-URL verwendet `pass=<pass>` Parameter?
 
@@ -133,16 +140,16 @@ Bei aktiviertem Logging (`log=true`) werden Log-Dateien erstellt:
 - ⏱️ Rate Limit erreicht - Warten Sie kurz und versuchen Sie es erneut
 
 **Fritz!Box meldet Fehler**
-- ✅ Update-URL korrekt konfiguriert? (Verwenden Sie `pass=<pass>`)
+- ✅ Update-URL verwendet `pass=<pass>` Parameter?
 - ✅ Script über Web erreichbar?
-- ✅ Benutzername ausgefüllt? (Beliebiger Text erforderlich)
-- ✅ API-Token im Kennwort-Feld eingegeben?
+- ✅ Benutzername ausgefüllt? (Beliebiger Text wie "dummy" erforderlich)
+- ✅ API-Token korrekt im Kennwort-Feld eingegeben?
 - ✅ PHP-Fehler im Webserver-Log prüfen
 
 **"Parameter missing or invalid"**
 - ✅ URL verwendet `pass=<pass>` nicht `api_token=<pass>`
-- ✅ Domain-Parameter vorhanden?
-- ✅ Fritz!Box überträgt `<pass>` korrekt?
+- ✅ Domain-Parameter in der URL vorhanden?
+- ✅ Fritz!Box überträgt das Kennwort korrekt als `<pass>`?
 
 ### Debug-Modus
 Für detaillierte Fehlerdiagnose:
@@ -154,11 +161,13 @@ Für detaillierte Fehlerdiagnose:
 
 Falls Sie vom ursprünglichen Cloudflare-Script migrieren:
 
-1. **API-Parameter ändern:** `cf_key` → `pass` (Fritz!Box Kennwort)
-2. **Proxy-Parameter entfernen:** Hetzner DNS hat keine Proxy-Funktion
-3. **Fritz!Box Update-URL anpassen:** Verwenden Sie `pass=<pass>` statt `api_token=<pass>`
+1. **URL-Parameter ändern:** `cf_key=<pass>` → `pass=<pass>`
+2. **Proxy-Parameter entfernen:** Hetzner DNS hat keine Proxy-Funktion  
+3. **Fritz!Box Konfiguration:**
+   - Benutzername: Beliebigen Text eingeben (z.B. "dummy")
+   - Kennwort: Ihr Hetzner DNS API-Token
+   - Update-URL: `pass=<pass>` verwenden
 4. **Domain-Zone in Hetzner DNS erstellen**
-5. **Benutzername in Fritz!Box:** Beliebigen Text eingeben (z.B. "dummy")
 
 ## 📈 API-Limits
 
