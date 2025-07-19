@@ -230,7 +230,8 @@ function hetzner_curl($endpoint, $api_token, $data = null, $method = "GET") {
 }
 
 function wlog($level, $msg) {
-    if (!isset($_GET["log"]) || !$_GET["log"]) return;
+    // Logging nur wenn explizit auf "true" gesetzt
+    if (!isset($_GET["log"]) || $_GET["log"] !== "true") return;
     
     $domains = explode(",", $_GET["domain"]);
     $log_file = "log-hetzner-" . trim($domains[0]) . ".txt";
