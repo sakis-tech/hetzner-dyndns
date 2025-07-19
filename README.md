@@ -47,14 +47,17 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
 - **DynDNS-Anbieter:** `Benutzerdefiniert`
 - **Update-URL:**
   ```
-  https://yourdomain.com/path/hetzner_dyndns.php?api_token=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
+  https://yourdomain.com/path/hetzner_dyndns.php?pass=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
   ```
 - **Domainname:** `subdomain.yourdomain.com`
-- **Benutzername:** `(leer lassen)`
+- **Benutzername:** `dummy` (beliebiger Text, da Fritz!Box ein Benutzername benötigt)
 - **Kennwort:** `Ihr_Hetzner_API_Token`
 
 ### Schritt 3: IPv6 aktivieren (optional)
 Für IPv6-Unterstützung in der Update-URL `&ipv6=<ip6addr>` hinzufügen.
+
+### ⚠️ Wichtiger Hinweis
+Die Fritz!Box benötigt zwingend einen Benutzernamen, auch wenn das Script diesen nicht verwendet. Geben Sie einfach einen beliebigen Text wie "dummy" oder "user" ein. **Das API-Token gehört ins Kennwort-Feld!**
 
 ## 🔧 Verwendung
 
@@ -62,7 +65,7 @@ Für IPv6-Unterstützung in der Update-URL `&ipv6=<ip6addr>` hinzufügen.
 
 | Parameter | Erforderlich | Beschreibung |
 |-----------|--------------|--------------|
-| `api_token` | ✅ | Hetzner DNS API Token |
+| `pass` | ✅ | Hetzner DNS API Token (Fritz!Box Kennwort) |
 | `domain` | ✅ | Domain(s) zu aktualisieren (Komma-getrennt) |
 | `ipv4` | ❌ | IPv4-Adresse (automatisch von Fritz!Box) |
 | `ipv6` | ❌ | IPv6-Adresse (automatisch von Fritz!Box) |
@@ -72,17 +75,17 @@ Für IPv6-Unterstützung in der Update-URL `&ipv6=<ip6addr>` hinzufügen.
 
 **Einzelne Domain:**
 ```
-https://example.com/hetzner_dyndns.php?api_token=YOUR_TOKEN&domain=home.example.com&ipv4=1.2.3.4&log=true
+https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com&ipv4=1.2.3.4&log=true
 ```
 
 **Multiple Domains:**
 ```
-https://example.com/hetzner_dyndns.php?api_token=YOUR_TOKEN&domain=home.example.com,server.example.com&ipv4=1.2.3.4&ipv6=2001:db8::1&log=true
+https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com,server.example.com&ipv4=1.2.3.4&ipv6=2001:db8::1&log=true
 ```
 
 **Nur IPv6:**
 ```
-https://example.com/hetzner_dyndns.php?api_token=YOUR_TOKEN&domain=home.example.com&ipv6=2001:db8::1
+https://example.com/hetzner_dyndns.php?pass=YOUR_TOKEN&domain=home.example.com&ipv6=2001:db8::1
 ```
 
 ## 📝 Logging
@@ -117,9 +120,10 @@ Bei aktiviertem Logging (`log=true`) werden Log-Dateien erstellt:
 ### Häufige Probleme
 
 **"Hetzner DNS authentication failed"**
-- ✅ API-Token korrekt?
+- ✅ API-Token im Fritz!Box Kennwort-Feld korrekt?
 - ✅ Token hat Schreibrechte?
 - ✅ Internet-Verbindung vorhanden?
+- ✅ Update-URL verwendet `pass=<pass>` Parameter?
 
 **"Could not find zone for domain"**
 - ✅ Domain als Zone in Hetzner DNS eingerichtet?
@@ -129,9 +133,16 @@ Bei aktiviertem Logging (`log=true`) werden Log-Dateien erstellt:
 - ⏱️ Rate Limit erreicht - Warten Sie kurz und versuchen Sie es erneut
 
 **Fritz!Box meldet Fehler**
-- ✅ Update-URL korrekt konfiguriert?
+- ✅ Update-URL korrekt konfiguriert? (Verwenden Sie `pass=<pass>`)
 - ✅ Script über Web erreichbar?
+- ✅ Benutzername ausgefüllt? (Beliebiger Text erforderlich)
+- ✅ API-Token im Kennwort-Feld eingegeben?
 - ✅ PHP-Fehler im Webserver-Log prüfen
+
+**"Parameter missing or invalid"**
+- ✅ URL verwendet `pass=<pass>` nicht `api_token=<pass>`
+- ✅ Domain-Parameter vorhanden?
+- ✅ Fritz!Box überträgt `<pass>` korrekt?
 
 ### Debug-Modus
 Für detaillierte Fehlerdiagnose:
@@ -143,10 +154,11 @@ Für detaillierte Fehlerdiagnose:
 
 Falls Sie vom ursprünglichen Cloudflare-Script migrieren:
 
-1. **API-Parameter ändern:** `cf_key` → `api_token`
+1. **API-Parameter ändern:** `cf_key` → `pass` (Fritz!Box Kennwort)
 2. **Proxy-Parameter entfernen:** Hetzner DNS hat keine Proxy-Funktion
-3. **Fritz!Box Update-URL anpassen**
+3. **Fritz!Box Update-URL anpassen:** Verwenden Sie `pass=<pass>` statt `api_token=<pass>`
 4. **Domain-Zone in Hetzner DNS erstellen**
+5. **Benutzername in Fritz!Box:** Beliebigen Text eingeben (z.B. "dummy")
 
 ## 📈 API-Limits
 
