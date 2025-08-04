@@ -167,11 +167,12 @@ foreach ($domains as $domain) {
             "zone_id" => $zone_id
         );
         $response = hetzner_curl("records", $api_token, $create_data, "POST");
-        if (isset($response["record"])) {
-            wlog("INFO", "Created A record successfully: " . $ipv4);
-        } else {
+        if (isset($response["error"])) {
             wlog("ERROR", "Failed to create A record");
             $result = "failure";
+        } else {
+            wlog("INFO", "Created A record successfully: " . $ipv4);
+
         }
     }
     
@@ -185,11 +186,11 @@ foreach ($domains as $domain) {
             "zone_id" => $zone_id
         );
         $response = hetzner_curl("records", $api_token, $create_data, "POST");
-        if (isset($response["record"])) {
-            wlog("INFO", "Created AAAA record successfully: " . $ipv6);
-        } else {
+        if (isset($response["error"])) {
             wlog("ERROR", "Failed to create AAAA record");
             $result = "failure";
+        } else {
+            wlog("INFO", "Created AAAA record successfully: " . $ipv6);
         }
     }
 }
