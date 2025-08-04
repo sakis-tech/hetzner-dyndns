@@ -116,7 +116,10 @@ foreach ($domains as $domain) {
                     // Update A record
                     $update_data = array(
                         "value" => $ipv4,
-                        "ttl" => 60
+                        "ttl" => 60,
+                        "type" => "A",
+                        "name" => $domain,
+                        "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
                     if (isset($response["record"])) {
@@ -136,7 +139,10 @@ foreach ($domains as $domain) {
                     // Update AAAA record
                     $update_data = array(
                         "value" => $ipv6,
-                        "ttl" => 60
+                        "ttl" => 60,
+                        "type" => "A",
+                        "name" => $domain,
+                        "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
                     if (isset($response["record"])) {
