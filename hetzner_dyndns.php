@@ -80,7 +80,8 @@ foreach ($domains as $domain) {
     // Extract zone name from domain
     $domain_parts = explode(".", $domain);
     $zone_name = implode(".", array_slice($domain_parts, -2)); // Get last two parts (domain.tld)
-    
+    $subdomain = implode(".", array_slice($domain_parts, 0, count($domain_parts) - 2)); // Get parts before domain.tld
+
     // Find zone ID
     $zones = hetzner_curl("zones?name=" . $zone_name, $api_token);
     if (!isset($zones["zones"]) || count($zones["zones"]) == 0) {
@@ -105,7 +106,8 @@ foreach ($domains as $domain) {
     
     // Check existing records
     foreach ($records["records"] as $record) {
-        if ($record["name"] == $domain) {
+        if ($record["name"] == $subdomain) {
+
             wlog("INFO", "Found existing record: " . $record["type"] . " " . $record["name"] . " -> " . $record["value"]);
             
             if ($ipv4 && $record["type"] == "A") {
@@ -118,15 +120,15 @@ foreach ($domains as $domain) {
                         "value" => $ipv4,
                         "ttl" => 60,
                         "type" => "A",
-                        "name" => $domain,
+                        "name" => $subdomain,
                         "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
-                    if (isset($response["record"])) {
-                        wlog("INFO", "Updated A record successfully: " . $ipv4);
-                    } else {
+                    if (isset($response["error"])) {
                         wlog("ERROR", "Failed to update A record");
                         $result = "failure";
+                    } else {
+                        wlog("INFO", "Updated A record successfully: " . $ipv4);
                     }
                 }
             }
@@ -140,16 +142,17 @@ foreach ($domains as $domain) {
                     $update_data = array(
                         "value" => $ipv6,
                         "ttl" => 60,
-                        "type" => "A",
-                        "name" => $domain,
+                        "type" => "AAAA",
+                        "name" => $subdomain,
                         "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
-                    if (isset($response["record"])) {
-                        wlog("INFO", "Updated AAAA record successfully: " . $ipv6);
-                    } else {
+                    if (isset($response["error"])) {
                         wlog("ERROR", "Failed to update AAAA record");
                         $result = "failure";
+                    } else {
+                        wlog("INFO", "Updated AAAA record successfully: " . $ipv6);
+
                     }
                 }
             }
