@@ -76,11 +76,12 @@ $result = "success";
 foreach ($domains as $domain) {
     $domain = trim($domain);
     wlog("INFO", "Processing domain: " . $domain);
-    
+
     // Extract zone name from domain
     $domain_parts = explode(".", $domain);
     $zone_name = implode(".", array_slice($domain_parts, -2)); // Get last two parts (domain.tld)
-    
+    $subdomain = implode(".", array_slice($domain_parts, 0, count($domain_parts) - 2)); // Get parts before domain.tld
+
     // Find zone ID
     $zones = hetzner_curl("zones?name=" . $zone_name, $api_token);
     if (!isset($zones["zones"]) || count($zones["zones"]) == 0) {
@@ -88,10 +89,10 @@ foreach ($domains as $domain) {
         $result = "failure";
         continue;
     }
-    
+
     $zone_id = $zones["zones"][0]["id"];
     wlog("INFO", "Found zone ID: " . $zone_id . " for " . $zone_name);
-    
+
     // Get existing records for this domain
     $records = hetzner_curl("records?zone_id=" . $zone_id, $api_token);
     if (!isset($records["records"])) {
@@ -99,15 +100,16 @@ foreach ($domains as $domain) {
         $result = "failure";
         continue;
     }
-    
+
     $found_a_record = false;
     $found_aaaa_record = false;
-    
+
     // Check existing records
     foreach ($records["records"] as $record) {
-        if ($record["name"] == $domain) {
+        if ($record["name"] == $subdomain) {
+
             wlog("INFO", "Found existing record: " . $record["type"] . " " . $record["name"] . " -> " . $record["value"]);
-            
+
             if ($ipv4 && $record["type"] == "A") {
                 $found_a_record = true;
                 if ($record["value"] == $ipv4) {
@@ -116,18 +118,21 @@ foreach ($domains as $domain) {
                     // Update A record
                     $update_data = array(
                         "value" => $ipv4,
-                        "ttl" => 60
+                        "ttl" => 60,
+                        "type" => "A",
+                        "name" => $subdomain,
+                        "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
-                    if (isset($response["record"])) {
-                        wlog("INFO", "Updated A record successfully: " . $ipv4);
-                    } else {
+                    if (isset($response["error"])) {
                         wlog("ERROR", "Failed to update A record");
                         $result = "failure";
+                    } else {
+                        wlog("INFO", "Updated A record successfully: " . $ipv4);
                     }
                 }
             }
-            
+
             if ($ipv6 && $record["type"] == "AAAA") {
                 $found_aaaa_record = true;
                 if ($record["value"] == $ipv6) {
@@ -136,54 +141,59 @@ foreach ($domains as $domain) {
                     // Update AAAA record
                     $update_data = array(
                         "value" => $ipv6,
-                        "ttl" => 60
+                        "ttl" => 60,
+                        "type" => "AAAA",
+                        "name" => $subdomain,
+                        "zone_id" => $zone_id
                     );
                     $response = hetzner_curl("records/" . $record["id"], $api_token, $update_data, "PUT");
-                    if (isset($response["record"])) {
-                        wlog("INFO", "Updated AAAA record successfully: " . $ipv6);
-                    } else {
+                    if (isset($response["error"])) {
                         wlog("ERROR", "Failed to update AAAA record");
                         $result = "failure";
+                    } else {
+                        wlog("INFO", "Updated AAAA record successfully: " . $ipv6);
+
                     }
                 }
             }
         }
     }
-    
+
     // Create new records if they don't exist
     if ($ipv4 && !$found_a_record) {
         wlog("INFO", "Creating new A record");
         $create_data = array(
             "type" => "A",
-            "name" => $domain,
+            "name" => $subdomain,
             "value" => $ipv4,
             "ttl" => 60,
             "zone_id" => $zone_id
         );
         $response = hetzner_curl("records", $api_token, $create_data, "POST");
-        if (isset($response["record"])) {
-            wlog("INFO", "Created A record successfully: " . $ipv4);
-        } else {
+        if (isset($response["error"])) {
             wlog("ERROR", "Failed to create A record");
             $result = "failure";
+        } else {
+            wlog("INFO", "Created A record successfully: " . $ipv4);
+
         }
     }
-    
+
     if ($ipv6 && !$found_aaaa_record) {
         wlog("INFO", "Creating new AAAA record");
         $create_data = array(
             "type" => "AAAA",
-            "name" => $domain,
+            "name" => $subdomain,
             "value" => $ipv6,
             "ttl" => 60,
             "zone_id" => $zone_id
         );
         $response = hetzner_curl("records", $api_token, $create_data, "POST");
-        if (isset($response["record"])) {
-            wlog("INFO", "Created AAAA record successfully: " . $ipv6);
-        } else {
+        if (isset($response["error"])) {
             wlog("ERROR", "Failed to create AAAA record");
             $result = "failure";
+        } else {
+            wlog("INFO", "Created AAAA record successfully: " . $ipv6);
         }
     }
 }
@@ -194,7 +204,7 @@ exit();
 
 function hetzner_curl($endpoint, $api_token, $data = null, $method = "GET") {
     $ch = curl_init();
-    
+
     curl_setopt($ch, CURLOPT_URL, "https://dns.hetzner.com/api/v1/" . $endpoint);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -204,7 +214,7 @@ function hetzner_curl($endpoint, $api_token, $data = null, $method = "GET") {
         'Auth-API-Token: ' . $api_token,
         'Content-Type: application/json'
     ));
-    
+
     if ($method == "POST") {
         curl_setopt($ch, CURLOPT_POST, true);
         if ($data) {
@@ -216,23 +226,23 @@ function hetzner_curl($endpoint, $api_token, $data = null, $method = "GET") {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         }
     }
-    
+
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
     if ($http_code >= 400) {
         wlog("ERROR", "HTTP Error " . $http_code . ": " . $response);
         return json_decode($response, true); // Return error for debugging
     }
-    
+
     return json_decode($response, true);
 }
 
 function wlog($level, $msg) {
     // Logging nur wenn explizit auf "true" gesetzt
     if (!isset($_GET["log"]) || $_GET["log"] !== "true") return;
-    
+
     $domains = explode(",", $_GET["domain"]);
     $log_file = "log-hetzner-" . trim($domains[0]) . ".txt";
     $log_entry = date("Y-m-d H:i:s") . " - " . $level . " - " . $msg . "\n";
