@@ -18,7 +18,8 @@
 //   - log (true/false) - optional (default: false)
 //
 // Env vars (to prevent parameter injection from outside):
-// - HETZNER_DYNDNS_LOGPATH: Path to a directory where logfiles are created
+// - HETZNER_DYNDNS_LOGPATH : Path to a directory where logfiles are created
+// - HETZNER_CLOUD_API_TOKEN:  Hetzner Cloud API-key, if not provided via URL (for safety reasons)
 //   
 //   Fritz!Box update URL:
 //   https://example.com/hetzner_dyndns.php?token=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
@@ -28,14 +29,14 @@ wlog("INFO", "===== Starting Hetzner DNS Script =====");
 header("Content-Type: text/plain");
 
 // API Token aus Fritz!Box Kennwort holen
-if (!isset($_GET["token"]) || empty($_GET["token"]) || !isset($_GET["domain"]) || empty($_GET["domain"])) {
+$api_token = getenv('HETZNER_CLOUD_API_TOKEN') ?: ($_GET['token'] ?? null);
+if (empty($api_token) || !isset($_GET["domain"]) || empty($_GET["domain"])) {
     wlog("ERROR", "API token or domain parameter missing or invalid");
     wlog("INFO", "Available parameters: " . implode(", ", array_keys($_GET)));
     wlog("INFO", "Script aborted");
     exit_error(400, "API token or domain parameter missing or invalid");
 }
 
-$api_token = $_GET["token"];
 wlog("INFO", "Using API token: " . substr($api_token, 0, 8) . "..." . substr($api_token, -4));
 
 if (isset($_GET["ipv4"]) && !empty($_GET["ipv4"]) && filter_var($_GET["ipv4"], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) == true) {
