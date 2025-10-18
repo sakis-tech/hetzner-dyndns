@@ -116,7 +116,7 @@ foreach ($domains as $domain) {
                 [
                     'name' => "{$subdomain}",
                     'type' => 'A',
-                    'ttl' => 3600,
+                    'ttl' => 60,
                     'records' => [
                         [
                             'value' => "{$ipv4}",
@@ -138,6 +138,20 @@ foreach ($domains as $domain) {
             $rrset4 = $res['rrset'];
             $rrset4Id = $rrset4['id'];
             wlog("INFO", "Found RRSet {$rrset4Id} for {$subdomain}:A in zone {$zone_name}, updating");
+            wlog("INFO", "Updating TTL");
+            $res = hetzner_curl(
+                "zones/{$zone_id}/rrsets/{$subdomain}/A/actions/change_ttl",
+                $api_token,
+                ['ttl' => 60],
+                'POST'
+            );
+            wlog("DEBUG", "Response: " . print_r($res, true));
+            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+                wlog("ERROR", "Could not update TTL for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                $result = "failure";
+                continue;
+            }
+            wlog("INFO", "Updating IPv4");
             $res = hetzner_curl(
                 "zones/{$zone_id}/rrsets/{$subdomain}/A/actions/set_records",
                 $api_token,
@@ -153,7 +167,7 @@ foreach ($domains as $domain) {
             );
             wlog("DEBUG", "Response: " . print_r($res, true));
             if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                wlog("ERROR", "Could not update IP for domain '" . $domain . "'. Error was: " . print_r($res, true));
                 $result = "failure";
                 continue;
             }
@@ -174,7 +188,7 @@ foreach ($domains as $domain) {
                 [
                     'name' => "{$subdomain}",
                     'type' => 'AAAA',
-                    'ttl' => 3600,
+                    'ttl' => 60,
                     'records' => [
                         [
                             'value' => "{$ipv6}",
@@ -196,6 +210,20 @@ foreach ($domains as $domain) {
             $rrset6 = $res['rrset'];
             $rrset6Id = $rrset6['id'];
             wlog("INFO", "Found RRSet {$rrset6Id} for {$subdomain}:A in zone {$zone_name}.");
+            wlog("INFO", "Updating TTL");
+            $res = hetzner_curl(
+                "zones/{$zone_id}/rrsets/{$subdomain}/AAAA/actions/change_ttl",
+                $api_token,
+                ['ttl' => 60],
+                'POST'
+            );
+            wlog("DEBUG", "Response: " . print_r($res, true));
+            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+                wlog("ERROR", "Could not update TTL for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                $result = "failure";
+                continue;
+            }
+            wlog("INFO", "Updating IPv6");
             $res = hetzner_curl(
                 "zones/{$zone_id}/rrsets/{$subdomain}/AAAA/actions/set_records",
                 $api_token,
@@ -211,7 +239,7 @@ foreach ($domains as $domain) {
             );
             wlog("DEBUG", "Response: " . print_r($res, true));
             if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                wlog("ERROR", "Could not update IP for domain '" . $domain . "'. Error was: " . print_r($res, true));
                 $result = "failure";
                 continue;
             }
