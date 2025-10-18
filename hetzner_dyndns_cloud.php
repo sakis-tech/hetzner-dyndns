@@ -12,7 +12,7 @@
 //
 // Parameters:
 //   - token - Hetzner Cloud API token - required
-//   - domains to edit - comma-separated, required, e.g. "mail.alexi.ch, service.my-domain.ch". Note: The TLD is used as Zone name!
+//   - domain(s) to edit - comma-separated, required, e.g. "mail.alexi.ch, service.my-domain.ch". Note: The TLD is used as Zone name!
 //   - ipv4 - optional
 //   - ipv6 - optional
 //   - log (true/false) - optional (default: false)
