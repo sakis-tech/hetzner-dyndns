@@ -18,7 +18,7 @@
 //   - log (true/false) - optional (default: false)
 //
 // Env vars (to prevent parameter injection from outside):
-// - HETZNER_DYNDNS_LOGPATH : Path to a directory where logfiles are created
+// - HETZNER_DYNDNS_LOGPATH : Path to a directory where logfiles are created. Must be present and writable.
 // - HETZNER_CLOUD_API_TOKEN:  Hetzner Cloud API-key, if not provided via URL (for safety reasons)
 //   
 //   Fritz!Box update URL:
@@ -137,7 +137,26 @@ foreach ($domains as $domain) {
         } else {
             $rrset4 = $res['rrset'];
             $rrset4Id = $rrset4['id'];
-            wlog("INFO", "Found RRSet {$rrset4Id} for {$subdomain}:A in zone {$zone_name}.");
+            wlog("INFO", "Found RRSet {$rrset4Id} for {$subdomain}:A in zone {$zone_name}, updating");
+            $res = hetzner_curl(
+                "zones/{$zone_id}/rrsets/{$subdomain}/A/actions/set_records",
+                $api_token,
+                [
+                    'records' => [
+                        [
+                            'value' => "{$ipv4}",
+                            'comment' => 'Auto-updated by ' . basename(__FILE__)
+                        ]
+                    ]
+                ],
+                'POST'
+            );
+            wlog("DEBUG", "Response: " . print_r($res, true));
+            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+                wlog("ERROR", "Could not update zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                $result = "failure";
+                continue;
+            }
         }
         wlog("INFO", "Done with IPv4 entry for {$domain}: " . $rrset4["type"] . " " . $rrset4["name"] . " -> " . $rrset4["records"][0]["value"]);
     }
@@ -177,6 +196,25 @@ foreach ($domains as $domain) {
             $rrset6 = $res['rrset'];
             $rrset6Id = $rrset6['id'];
             wlog("INFO", "Found RRSet {$rrset6Id} for {$subdomain}:A in zone {$zone_name}.");
+            $res = hetzner_curl(
+                "zones/{$zone_id}/rrsets/{$subdomain}/AAAA/actions/set_records",
+                $api_token,
+                [
+                    'records' => [
+                        [
+                            'value' => "{$ipv6}",
+                            'comment' => 'Auto-updated by ' . basename(__FILE__)
+                        ]
+                    ]
+                ],
+                'POST'
+            );
+            wlog("DEBUG", "Response: " . print_r($res, true));
+            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+                wlog("ERROR", "Could not update zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
+                $result = "failure";
+                continue;
+            }
         }
         wlog("INFO", "Done with IPv6 entry for {$domain}: " . $rrset6["type"] . " " . $rrset6["name"] . " -> " . $rrset6["records"][0]["value"]);
     }
@@ -225,8 +263,8 @@ function wlog($level, $msg) {
     if (!isset($_GET["log"]) || $_GET["log"] !== "true") return;
 
     $domains = explode(",", $_GET["domain"] ?? '');
-    $log_path = getenv('HETZNER_DYNDNS_LOGPATH') ?: ('.' . DIRECTORY_SEPARATOR);
-    $log_file = "{$log_path}log-hetzner-" . trim($domains[0]) . ".txt";
+    $log_path = getenv('HETZNER_DYNDNS_LOGPATH') ?: '.';
+    $log_file = "{$log_path}/log-hetzner-" . trim($domains[0]) . ".txt";
     $log_entry = date("Y-m-d H:i:s") . " - " . $level . " - " . $msg . "\n";
     // to file:
     file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
