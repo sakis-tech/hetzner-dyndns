@@ -11,19 +11,22 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
 - ✅ **Detailliertes Logging** (optional)
 - ✅ **Sicherer Token-Transfer** über Fritz!Box Kennwort-Feld
 - ✅ **Niedrige TTL** (60 Sekunden) für schnelle Updates
+- ✅ **Neu: Support für Hetzner Cloud API** (via hetzner_dyndns_cloud.php)
 
 ## 📋 Voraussetzungen
 
 - PHP 7.0+ mit cURL Unterstützung
 - Webserver (Apache, Nginx, etc.)
-- Hetzner DNS Account mit API-Zugriff
+- Hetzner DNS Account mit API-Zugriff (Alternativ: Hetzner Cloud API mit Token)
 - Domain bereits als Zone in Hetzner DNS eingerichtet
 
-## 🛠 Installation
+## 🛠 Installation (Hetzner DNS API)
+
+Dieses Script verwenden Sie, wenn Sie die bisherige Hetzner DNS-API <https://dns.hetzner.com/api/v1/> verwenden.
 
 1. **Script herunterladen**
    ```bash
-   wget https://raw.githubusercontent.com/sakis-tech/hetzner-dyndns/main/hetzner_dyndns.php
+   wget https://raw.githubusercontent.com/bylexus/hetzner-dyndns/main/hetzner_dyndns.php
    ```
 
 2. **Auf Webserver hochladen**
@@ -36,6 +39,26 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
    - Erstellen Sie einen neuen Token mit **Lese- und Schreibrechten**
    - Notieren Sie sich den Token (wird nur einmal angezeigt!)
 
+## 🛠 Installation (Hetzner Cloud API)
+
+Dieses Script verwenden Sie, wenn Sie bereits die neue DNS-API der Hetzner Cloud (<https://api.hetzner.cloud/v1>) verwenden.
+
+1. **Script herunterladen**
+   ```bash
+   wget https://raw.githubusercontent.com/bylexus/hetzner-dyndns/main/hetzner_dyndns_cloud.php
+   ```
+
+2. **Auf Webserver hochladen**
+   - Script in ein Web-zugängliches Verzeichnis kopieren
+   - Stellen Sie sicher, dass PHP Schreibrechte für Log-Dateien hat
+
+3. **Hetzner Cloud API-Token erstellen**
+   - Gehen Sie zu [Hetzner Cloud Console](https://console.hetzner.com/)
+   - Navigieren Sie zu Ihrem Projekt
+   - Navigieren Sie zu "Sicherheit" > "API Tokens"
+   - Erstellen Sie einen neuen Token mit **Lese- und Schreibrechten**
+   - Notieren Sie sich den Token (wird nur einmal angezeigt!)
+
 ## ⚙️ Fritz!Box Konfiguration
 
 ### Schritt 1: DynDNS einrichten
@@ -44,6 +67,9 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
 3. **DynDNS verwenden** aktivieren
 
 ### Schritt 2: Anbieter konfigurieren
+
+**für die bisherige Hetzner DNS API:**
+
 - **DynDNS-Anbieter:** `Benutzerdefiniert`
 - **Update-URL:**
   ```
@@ -53,11 +79,38 @@ Ein einfaches PHP-Script, das als DynDNS-Provider fungiert und Ihre aktuelle IP-
 - **Benutzername:** `dummy` (beliebiger Text, da Fritz!Box ein Benutzername benötigt)
 - **Kennwort:** `Ihr_Hetzner_API_Token`
 
+**für die neue Hetzner Cloud API:**
+
+- **DynDNS-Anbieter:** `Benutzerdefiniert`
+- **Update-URL:**
+  ```
+  https://yourdomain.com/path/hetzner_dyndns_cloud.php?token=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
+  ```
+- **Domainname:** `subdomain.yourdomain.com`
+- **Benutzername:** `dummy` (beliebiger Text, da Fritz!Box ein Benutzername benötigt)
+- **Kennwort:** `Ihr_Hetzner_API_Token`
+
+Alternativ können Sie das Cloud Token auch als Env-Variable setzen (z.B. wenn Sie das Script in einem Docker-Container betreiben):
+
+`HETZNER_CLOUD_API_TOKEN=xxxxxxxxxxxxxx`
+
+
 ### Schritt 3: IPv6 aktivieren (optional)
 Für IPv6-Unterstützung in der Update-URL `&ipv6=<ip6addr>` hinzufügen.
 
 ### ⚠️ Wichtiger Hinweis
 Die Fritz!Box benötigt zwingend einen Benutzernamen, auch wenn das Script diesen nicht verwendet. Geben Sie einfach einen beliebigen Text wie "dummy" oder "user" ein. **Das API-Token gehört ins Kennwort-Feld!**
+
+### ⚠️ Mehrere Domains
+
+Die Fritz!Box kann im Domain-Feld leider nur eine Domain konfigurieren. Wenn Sie mehrere Domains aktualisieren wollen, müssen Sie die Domains im Script-Pfad mitgeben:
+
+- **Update-URL:**
+  ```
+  https://yourdomain.com/path/hetzner_dyndns_cloud.php?token=<pass>&domain=sub1.domain.com,sub2.domain.com&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
+  ```
+- **Domainname:** `dummy.domain`: Da die Fritz!Box trotzdem ein Domainname benötigt, geben Sie auch hier ein Dummy-Wert an.
+
 
 ## 🔧 Verwendung
 
@@ -66,6 +119,7 @@ Die Fritz!Box benötigt zwingend einen Benutzernamen, auch wenn das Script diese
 | Parameter | Erforderlich | Beschreibung |
 |-----------|--------------|--------------|
 | `pass` | ✅ | Hetzner DNS API Token (Fritz!Box Kennwort) |
+| `token` | (✅) | Hetzner Cloud API Token (Fritz!Box Kennwort) |
 | `domain` | ✅ | Domain(s) zu aktualisieren (Komma-getrennt) |
 | `ipv4` | ❌ | IPv4-Adresse (automatisch von Fritz!Box) |
 | `ipv6` | ❌ | IPv6-Adresse (automatisch von Fritz!Box) |
@@ -76,8 +130,15 @@ Die Fritz!Box benötigt zwingend einen Benutzernamen, auch wenn das Script diese
 ### Beispiele
 
 **Fritz!Box Update-URL (Standard-Konfiguration):**
+
+herkömmliche DNS-API:
 ```
 https://example.com/hetzner_dyndns.php?pass=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
+```
+
+neue Cloud-API:
+```
+https://example.com/hetzner_dyndns_cloud.php?token=<pass>&domain=<domain>&ipv4=<ipaddr>&ipv6=<ip6addr>&log=true
 ```
 *Die Platzhalter `<pass>`, `<domain>`, `<ipaddr>` etc. werden automatisch von der Fritz!Box ersetzt.*
 
@@ -198,6 +259,7 @@ GNU General Public License v3.0
 
 - [Hetzner DNS Console](https://dns.hetzner.com/)
 - [Hetzner DNS API Dokumentation](https://dns.hetzner.com/api-docs/)
+- [Hetzner Cloud API Dokumentation](https://docs.hetzner.cloud/reference/cloud)
 - [Fritz!Box Handbuch](https://avm.de/service/handbuecher/)
 
 ---
