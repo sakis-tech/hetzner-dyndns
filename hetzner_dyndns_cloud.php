@@ -105,152 +105,117 @@ foreach ($domains as $domain) {
 
     // -------------- IPv4 ----------------------------
     if (!empty($ipv4)) {
-        // Get Resource Record Set (RRSet) for IPv4 entry:
-        $res = hetzner_curl("zones/{$zone_id}/rrsets/{$subdomain}/A", $api_token);
-        wlog("DEBUG", "Response: " . print_r($res, true));
-        if (!isset($res["rrset"]['id'])) {
-            wlog("INFO", "Could not find RRSet {$subdomain}:A in zone {$zone_name}, try to create one");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets",
-                $api_token,
-                [
-                    'name' => "{$subdomain}",
-                    'type' => 'A',
-                    'ttl' => 60,
-                    'records' => [
-                        [
-                            'value' => "{$ipv4}",
-                            'comment' => 'Auto-set by ' . basename(__FILE__)
-                        ]
-                    ]
-                ],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["rrset"]['id'])) {
-                wlog("ERROR", "Could not create zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
-            $rrset4 = $res['rrset'];
-            $rrset4Id = $rrset4['id'];
-        } else {
-            $rrset4 = $res['rrset'];
-            $rrset4Id = $rrset4['id'];
-            wlog("INFO", "Found RRSet {$rrset4Id} for {$subdomain}:A in zone {$zone_name}, updating");
-            wlog("INFO", "Updating TTL");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets/{$subdomain}/A/actions/change_ttl",
-                $api_token,
-                ['ttl' => 60],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update TTL for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
-            wlog("INFO", "Updating IPv4");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets/{$subdomain}/A/actions/set_records",
-                $api_token,
-                [
-                    'records' => [
-                        [
-                            'value' => "{$ipv4}",
-                            'comment' => 'Auto-updated by ' . basename(__FILE__)
-                        ]
-                    ]
-                ],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update IP for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
+        if (!update_record_set($zone_id, $subdomain, $zone_name, 'A', $ipv4, $api_token)) {
+            $result = "failure";
+            continue;
         }
-        wlog("INFO", "Done with IPv4 entry for {$domain}: " . $rrset4["type"] . " " . $rrset4["name"] . " -> " . $rrset4["records"][0]["value"]);
     }
 
     // -------------- IPv6 ----------------------------
     if (!empty($ipv6)) {
-        // Get Resource Record Set (RRSet) for IPv6 entry:
-        $res = hetzner_curl("zones/{$zone_id}/rrsets/{$subdomain}/AAAA", $api_token);
-        wlog("DEBUG", "Response: " . print_r($res, true));
-        if (!isset($res["rrset"]['id'])) {
-            wlog("INFO", "Could not find RRSet {$subdomain}:AAAA in zone {$zone_name}, try to create one");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets",
-                $api_token,
-                [
-                    'name' => "{$subdomain}",
-                    'type' => 'AAAA',
-                    'ttl' => 60,
-                    'records' => [
-                        [
-                            'value' => "{$ipv6}",
-                            'comment' => 'Auto-set by ' . basename(__FILE__)
-                        ]
-                    ]
-                ],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["rrset"]['id'])) {
-                wlog("ERROR", "Could not create zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
-            $rrset6 = $res['rrset'];
-            $rrset6Id = $rrset6['id'];
-        } else {
-            $rrset6 = $res['rrset'];
-            $rrset6Id = $rrset6['id'];
-            wlog("INFO", "Found RRSet {$rrset6Id} for {$subdomain}:A in zone {$zone_name}.");
-            wlog("INFO", "Updating TTL");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets/{$subdomain}/AAAA/actions/change_ttl",
-                $api_token,
-                ['ttl' => 60],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update TTL for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
-            wlog("INFO", "Updating IPv6");
-            $res = hetzner_curl(
-                "zones/{$zone_id}/rrsets/{$subdomain}/AAAA/actions/set_records",
-                $api_token,
-                [
-                    'records' => [
-                        [
-                            'value' => "{$ipv6}",
-                            'comment' => 'Auto-updated by ' . basename(__FILE__)
-                        ]
-                    ]
-                ],
-                'POST'
-            );
-            wlog("DEBUG", "Response: " . print_r($res, true));
-            if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
-                wlog("ERROR", "Could not update IP for domain '" . $domain . "'. Error was: " . print_r($res, true));
-                $result = "failure";
-                continue;
-            }
+        if (!update_record_set($zone_id, $subdomain, $zone_name, 'AAAA', $ipv6, $api_token)) {
+            $result = "failure";
+            continue;
         }
-        wlog("INFO", "Done with IPv6 entry for {$domain}: " . $rrset6["type"] . " " . $rrset6["name"] . " -> " . $rrset6["records"][0]["value"]);
     }
 }
 
 echo "Result: $result";
 wlog("INFO", "===== Script completed =====");
 exit();
+
+/**
+ * Updates or creates a DNS record set (RRSet) for a given zone.
+ * Handles both IPv4 (A) and IPv6 (AAAA) records.
+ *
+ * @param string $zone_id The Hetzner zone ID
+ * @param string $subdomain The subdomain to update
+ * @param string $zone_name The zone name (TLD)
+ * @param string $record_type The DNS record type ('A' or 'AAAA')
+ * @param string $ip_value The IP address to set
+ * @param string $api_token The Hetzner API token
+ * @return bool Returns true on success, false on failure
+ */
+function update_record_set($zone_id, $subdomain, $zone_name, $record_type, $ip_value, $api_token) {
+    // Construct full domain from subdomain and zone name
+    $domain = $subdomain . "." . $zone_name;
+
+    wlog("DEBUG", "update_record_set called with: zone_id={$zone_id}, subdomain={$subdomain}, type={$record_type}, ip={$ip_value}");
+
+    // Get Resource Record Set (RRSet)
+    $res = hetzner_curl("zones/{$zone_id}/rrsets/{$subdomain}/{$record_type}", $api_token);
+    wlog("DEBUG", "Response: " . print_r($res, true));
+
+    if (!isset($res["rrset"]['id'])) {
+        // Record doesn't exist, create it
+        wlog("INFO", "Could not find RRSet {$subdomain}:{$record_type} in zone {$zone_name}, try to create one");
+        $res = hetzner_curl(
+            "zones/{$zone_id}/rrsets",
+            $api_token,
+            [
+                'name' => "{$subdomain}",
+                'type' => $record_type,
+                'ttl' => 60,
+                'records' => [
+                    [
+                        'value' => "{$ip_value}",
+                        'comment' => 'Auto-set by ' . basename(__FILE__)
+                    ]
+                ]
+            ],
+            'POST'
+        );
+        wlog("DEBUG", "Response: " . print_r($res, true));
+        if (!isset($res["rrset"]['id'])) {
+            wlog("ERROR", "Could not create zone for domain '" . $domain . "'. Error was: " . print_r($res, true));
+            return false;
+        }
+        $rrset = $res['rrset'];
+    } else {
+        // Record exists, update it
+        $rrset = $res['rrset'];
+        $rrsetId = $rrset['id'];
+        wlog("INFO", "Found RRSet {$rrsetId} for {$subdomain}:{$record_type} in zone {$zone_name}, updating");
+
+        // Update TTL
+        wlog("INFO", "Updating TTL");
+        $res = hetzner_curl(
+            "zones/{$zone_id}/rrsets/{$subdomain}/{$record_type}/actions/change_ttl",
+            $api_token,
+            ['ttl' => 60],
+            'POST'
+        );
+        wlog("DEBUG", "Response: " . print_r($res, true));
+        if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+            wlog("ERROR", "Could not update TTL for domain '" . $domain . "'. Error was: " . print_r($res, true));
+            return false;
+        }
+
+        // Update IP address
+        wlog("INFO", "Updating " . ($record_type == 'A' ? 'IPv4' : 'IPv6'));
+        $res = hetzner_curl(
+            "zones/{$zone_id}/rrsets/{$subdomain}/{$record_type}/actions/set_records",
+            $api_token,
+            [
+                'records' => [
+                    [
+                        'value' => "{$ip_value}",
+                        'comment' => 'Auto-updated by ' . basename(__FILE__)
+                    ]
+                ]
+            ],
+            'POST'
+        );
+        wlog("DEBUG", "Response: " . print_r($res, true));
+        if (!isset($res["action"]['id']) || !empty($res['action']['error'])) {
+            wlog("ERROR", "Could not update IP for domain '" . $domain . "'. Error was: " . print_r($res, true));
+            return false;
+        }
+    }
+
+    wlog("INFO", "Done with " . ($record_type == 'A' ? 'IPv4' : 'IPv6') . " entry for {$domain}: " . $rrset["type"] . " " . $rrset["name"] . " -> " . $rrset["records"][0]["value"]);
+    return true;
+}
 
 function hetzner_curl($endpoint, $api_token, $data = null, $method = "GET") {
     $ch = curl_init();

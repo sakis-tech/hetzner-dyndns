@@ -259,6 +259,7 @@ GNU General Public License v3.0
 
 - [Hetzner DNS Console](https://dns.hetzner.com/)
 - [Hetzner DNS API Dokumentation](https://dns.hetzner.com/api-docs/)
+- [Hetzner Cloud API Dokumentation](https://docs.hetzner.cloud/reference/cloud)
 - [Fritz!Box Handbuch](https://avm.de/service/handbuecher/)
 
 ---
